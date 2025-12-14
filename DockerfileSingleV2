@@ -1,0 +1,32 @@
+FROM gradle:jdk-21-and-23-graal-jammy
+
+# 작업 디렉토리 설정
+WORKDIR /app
+
+# 소스 코드와 Gradle 래퍼 복사
+COPY build.gradle.kts .
+COPY settings.gradle.kts .
+
+# 종속성 설치
+RUN gradle dependencies --no-daemon
+
+# 소스 코드 복사
+COPY .env* .
+COPY src src
+
+# 애플리케이션 빌드
+RUN gradle build --no-daemon
+
+# 이후 명령어가 편하도록 불필요한 파일 삭제
+RUN rm -rf /app/build/libs/*-plain.jar
+
+# 빌드된 JAR 파일 복사
+RUN mv /app/build/libs/*.jar app.jar
+
+# 최종 도커 이미지에 담길 필요없는 것들 삭제
+RUN rm -rf /app/build
+RUN rm -rf /app/src
+RUN rm -rf /app/*.kts
+
+# 실행할 JAR 파일 지정
+ENTRYPOINT ["java", "-jar", "-Dspring.profiles.active=prod", "app.jar"]
